@@ -10,6 +10,7 @@ import lanms
 import os
 from eval import resize_image, sort_poly, detect
 import collections
+import json
 
 def text_detection(img_path):
   start_time = time.time()
@@ -64,7 +65,8 @@ def text_detection(img_path):
           tl['score'] = float(score)
           text_lines.append(tl)
   
-  print(len(text_lines))
+  #print(text_lines)
+  return text_lines
 
 
 checkpoint_path = './east_icdar2015_resnet_v1_50_rbox'
@@ -81,5 +83,5 @@ ckpt_state = tf.train.get_checkpoint_state(checkpoint_path)
 model_path = os.path.join(checkpoint_path, os.path.basename(ckpt_state.model_checkpoint_path))
 saver.restore(sess, model_path)
 
-text_detection("/tmp/azure-subscription.png");
-text_detection("/tmp/mikrotik.png");
+#text_detection("/tmp/azure-subscription.png");
+print(json.dumps(text_detection("/tmp/ez.png"), indent=4));
