@@ -82,3 +82,4 @@ model_path = os.path.join(checkpoint_path, os.path.basename(ckpt_state.model_che
 saver.restore(sess, model_path)
 
 text_detection("/tmp/azure-subscription.png");
+text_detection("/tmp/mikrotik.png");
