@@ -11,6 +11,9 @@ import os
 from eval import resize_image, sort_poly, detect
 import collections
 import json
+from PIL import Image
+import pytesseract
+import cv2
 
 def text_detection(img_path):
   start_time = time.time()
@@ -68,6 +71,20 @@ def text_detection(img_path):
   #print(text_lines)
   return text_lines
 
+def tesseract(image_path, x, y, width, height): 
+  image = cv2.imread(image_path)
+  image = image[y:y+height, x:x+width]
+  gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+  
+  gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+  
+  filename = "{}.png".format(os.getpid())
+  cv2.imwrite(filename, gray)
+  
+  text = pytesseract.image_to_string(Image.open(filename))
+  os.remove(filename)
+  return text
+
 
 checkpoint_path = './east_icdar2015_resnet_v1_50_rbox'
 
@@ -84,4 +101,7 @@ model_path = os.path.join(checkpoint_path, os.path.basename(ckpt_state.model_che
 saver.restore(sess, model_path)
 
 #text_detection("/tmp/azure-subscription.png");
-print(json.dumps(text_detection("/tmp/ez.png"), indent=4));
+boxes = text_detection("/tmp/mikrotik.png")
+print(json.dumps(boxes, indent=4))
+for box in boxes:
+    print(tesseract("/tmp/mikrotik.png", int(box["x0"]), int(box["y0"]), int(box["x2"] - box["x0"]), int(box["y2"] - box["y0"])))
