@@ -115,8 +115,8 @@ original_image = cv2.imread(image_path)
 
 advanced_boxes = []
 
-THRESHOLD_X=7
-THRESHOLD_Y=3
+THRESHOLD_X=10
+THRESHOLD_Y=10
 
 i = 0
 j = 0
