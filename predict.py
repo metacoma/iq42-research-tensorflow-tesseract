@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+# coding=utf-8
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -71,17 +73,16 @@ def text_detection(img_path):
   #print(text_lines)
   return text_lines
 
-def tesseract(image_path, x, y, width, height): 
-  image = cv2.imread(image_path)
-  image = image[y:y+height, x:x+width]
+def tesseract(src_image, x, y, width, height): 
+  image = src_image[y:y+height, x:x+width]
   gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-  
   gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
   
   filename = "{}.png".format(os.getpid())
   cv2.imwrite(filename, gray)
+  cv2.imwrite(filename, image)
   
-  text = pytesseract.image_to_string(Image.open(filename))
+  text = pytesseract.image_to_string(Image.open(filename), "eng+rus")
   os.remove(filename)
   return text
 
@@ -101,7 +102,12 @@ model_path = os.path.join(checkpoint_path, os.path.basename(ckpt_state.model_che
 saver.restore(sess, model_path)
 
 #text_detection("/tmp/azure-subscription.png");
-boxes = text_detection("/tmp/mikrotik.png")
+
+image_path = "/tmp/mikrotik.png"
+
+boxes = text_detection(image_path)
 print(json.dumps(boxes, indent=4))
+original_image = cv2.imread(image_path)
 for box in boxes:
-    print(tesseract("/tmp/mikrotik.png", int(box["x0"]), int(box["y0"]), int(box["x2"] - box["x0"]), int(box["y2"] - box["y0"])))
+    print("convert ~/Downloas/mikrotik.png -crop {0}x{1}+{2}+{3} - | display".format(int(box["x2"] - box["x0"]), int(box["y2"] - box["y0"]), int(box["x0"]), int(box["y0"])))
+    print(tesseract(original_image, int(box["x0"]), int(box["y0"]), int(box["x2"] - box["x0"]), int(box["y2"] - box["y0"])))
