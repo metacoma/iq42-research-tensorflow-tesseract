@@ -21,7 +21,7 @@ def text_detection(img_path):
   start_time = time.time()
   rtparams = collections.OrderedDict()
 
-  img = cv2.imread(img_path, 1) 
+  img = cv2.imread(img_path, 1)
   im_resized, (ratio_h, ratio_w) = resize_image(img)
 
   rtparams['start_time'] = datetime.datetime.now().isoformat()
@@ -44,10 +44,10 @@ def text_detection(img_path):
     feed_dict={input_images: [im_resized[:,:,::-1]]})
   timer['net'] = time.time() - start
   boxes, timer = detect(score_map=score, geo_map=geometry, timer=timer)
-  
+
   print('net {:.0f}ms, restore {:.0f}ms, nms {:.0f}ms'.format(
     timer['net']*1000, timer['restore']*1000, timer['nms']*1000))
-  
+
   if boxes is not None:
       scores = boxes[:,8].reshape(-1)
       boxes = boxes[:, :8].reshape((-1, 4, 2))
@@ -57,7 +57,7 @@ def text_detection(img_path):
   duration = time.time() - start_time
   timer['overall'] = duration
   print('[timing] {}'.format(duration))
-  
+
   if boxes is not None:
       text_lines = []
       for box, score in zip(boxes, scores):
@@ -69,19 +69,23 @@ def text_detection(img_path):
               map(float, box.flatten())))
           tl['score'] = float(score)
           text_lines.append(tl)
-  
+
   #print(text_lines)
   return text_lines
 
-def tesseract(src_image, x, y, width, height): 
+def tesseract(src_image, x, y, width, height):
   image = src_image[y:y+height, x:x+width]
-  gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+  try:
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+  except:
+    print("------------- ERROR --------------")
+    return
   gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-  
+
   filename = "{}.png".format(os.getpid())
   cv2.imwrite(filename, gray)
   cv2.imwrite(filename, image)
-  
+
   text = pytesseract.image_to_string(Image.open(filename), "eng+rus")
   os.remove(filename)
   return text
@@ -103,11 +107,49 @@ saver.restore(sess, model_path)
 
 #text_detection("/tmp/azure-subscription.png");
 
-image_path = "/tmp/mikrotik.png"
+image_path = "/tmp/telega.png"
 
 boxes = text_detection(image_path)
 print(json.dumps(boxes, indent=4))
 original_image = cv2.imread(image_path)
+
+advanced_boxes = []
+
+THRESHOLD_X=7
+THRESHOLD_Y=3
+
+i = 0
+j = 0
 for box in boxes:
-    print("convert ~/Downloas/mikrotik.png -crop {0}x{1}+{2}+{3} - | display".format(int(box["x2"] - box["x0"]), int(box["y2"] - box["y0"]), int(box["x0"]), int(box["y0"])))
+    match = False
+    for advanced_box in advanced_boxes:
+      if abs(box["y0"] - advanced_box["y0"]) < THRESHOLD_Y:
+        if (advanced_box["x0"] + (advanced_box["x2"] - advanced_box["x0"]) - box["x0"] < THRESHOLD_X):
+          advanced_box["x2"] = box["x2"]
+          advanced_box["y2"] = box["y2"]
+          match = True
+          break;
+        if (box["x0"] + (box["x2"] - box["x0"]) - advanced_box["x0"] < THRESHOLD_X):
+          advanced_box["x0"] = box["x0"]
+          advanced_box["y2"] = box["y2"]
+          match = True
+          break;
+
+    if not match:
+      j = j + 1
+      print("#{} add box".format(j))
+      advanced_boxes.append(box)
+
+print("Boxes count: {}, advanced boxes count: {}".format(len(boxes), len(advanced_boxes)))
+
+i = 0
+for box in advanced_boxes:
+    print("{4},convert ~/Downloads/bpm.png -crop {0}x{1}+{2}+{3} - | display".format(int(box["x2"] - box["x0"]), int(box["y2"] - box["y0"]), int(box["x0"]), int(box["y0"]), i))
+    i = i + 1
+    box["x0"] = box["x0"] - 6
+    box["y0"] = box["y0"] - 5
+
+    box["x2"] = box["x2"] + 6
+    box["y2"] = box["y2"] + 5
+
     print(tesseract(original_image, int(box["x0"]), int(box["y0"]), int(box["x2"] - box["x0"]), int(box["y2"] - box["y0"])))
